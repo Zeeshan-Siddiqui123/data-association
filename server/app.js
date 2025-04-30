@@ -58,12 +58,14 @@ const isloggedIn = (req, res, next) => {
     } else {
         let data = jwt.verify(req.cookies.token, "key")
         req.user = data
+        next()
     }
-    next()
+    
 }
 
 app.get('/profile', isloggedIn, (req, res) => {
     console.log(req.user);
+    res.redirect('/login')
 })
 
 app.listen(3000)
