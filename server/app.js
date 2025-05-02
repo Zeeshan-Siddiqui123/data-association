@@ -43,7 +43,7 @@ app.post('/login', async (req, res) => {
         if (result) {
             let token = jwt.sign({ email: email, userid: user._id }, 'key')
             res.cookie("token", token)
-            res.status(200).send("You Can Login")
+            res.status(200).redirect("/profile")
         } else res.redirect('/login')
     })
 })
@@ -54,18 +54,18 @@ app.get('/logout', (req, res) => {
 
 const isloggedIn = (req, res, next) => {
     if (req.cookies.token === "") {
-        res.send("You Must Be Login")
+        res.redirect('/login')
     } else {
         let data = jwt.verify(req.cookies.token, "key")
         req.user = data
         next()
     }
-    
+
 }
 
-app.get('/profile', isloggedIn, (req, res) => {
-    console.log(req.user);
-    res.redirect('/login')
+app.get('/profile', isloggedIn, async (req, res) => {
+    let user = await userModel.findOne({ email: req.user.email })
+    res.render('profile', {user})
 })
 
 app.listen(3000)
