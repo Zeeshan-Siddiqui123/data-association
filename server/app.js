@@ -5,11 +5,16 @@ const postModel = require('./models/post')
 const cookieParser = require("cookie-parser")
 const bcrypt = require('bcrypt')
 const jwt = require("jsonwebtoken")
+const path = require("path")
+const upload = require("./config/multerconfig")
+
 
 app.set("view engine", 'ejs')
+app.use(express.static(path.join(__dirname, "public")))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
+
 
 app.get('/', (req, res) => {
     res.render('index')
@@ -83,23 +88,47 @@ app.post('/post', isloggedIn, async (req, res) => {
 
 app.get('/like/:id', isloggedIn, async (req, res) => {
     let post = await postModel.findOne({ _id: req.params.id }).populate('user')
-    if (post.likes.indexOf(req.user.userid)===-1) {
+    if (post.likes.indexOf(req.user.userid) === -1) {
         post.likes.push(req.user.userid)
-    }else{
-        post.likes.splice(post.likes.indexOf(req.user.userid), 1)  
+    } else {
+        post.likes.splice(post.likes.indexOf(req.user.userid), 1)
     }
     await post.save()
     res.redirect('/profile')
 })
 
 app.post('/update/:id', isloggedIn, async (req, res) => {
-    let post = await postModel.findOneAndUpdate({ _id: req.params.id }, {content: req.body.content})
+    let post = await postModel.findOneAndUpdate({ _id: req.params.id }, { content: req.body.content })
     res.redirect('/profile')
 })
+app.get('/delete/:id', isloggedIn, async (req, res) => {
+    let post = await postModel.findOneAndDelete({ _id: req.params.id })
+    res.redirect('/profile')
+})
+app.post('/delete/:id', isloggedIn, async (req, res) => {
+    try {
+        await postModel.findByIdAndDelete(req.params.id);
+        res.redirect('/profile');
+    } catch (err) {
+        res.status(500).send('Error deleting post');
+    }
+});
 
 app.get('/edit/:id', isloggedIn, async (req, res) => {
     let post = await postModel.findOne({ _id: req.params.id }).populate('user')
-    res.render('edit', {post})
+    res.render('edit', { post })
 })
+
+app.get('/profile/upload', isloggedIn, async (req, res) => {
+    res.render('profileupload')
+})
+
+app.post('/upload', isloggedIn, upload.single('image'),  async(req, res) => {
+       let user = await userModel.findOne({email: req.user.email})
+       user.profilepic =  req.file.filename
+       await user.save()
+       res.redirect('/profile')
+})
+
 
 app.listen(3000);
